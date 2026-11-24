@@ -27,6 +27,7 @@ import {
 import DrinkModal from './components/DrinkModal';
 import PrivacyModal from './components/PrivacyModal';
 import AdminBarista from './pages/AdminBarista';
+import CookieBanner, { setCookie } from './components/CookieBanner';
 
 export default function App() {
   const [theme, setTheme] = useState(() => document.documentElement.getAttribute('data-theme') || 'dark');
@@ -51,6 +52,7 @@ export default function App() {
   const [honeypot, setHoneypot] = useState('');
   const [consent, setConsent] = useState(false);
   const [privacyOpen, setPrivacyOpen] = useState(false);
+  const [cookieForceOpen, setCookieForceOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [lastOrder, setLastOrder] = useState(null);
@@ -61,6 +63,7 @@ export default function App() {
     const next = theme === 'dark' ? 'light' : 'dark';
     setTheme(next);
     document.documentElement.setAttribute('data-theme', next);
+    setCookie('zerno_theme', next);
     try {
       localStorage.setItem('zerno_theme', next);
     } catch {}
@@ -313,6 +316,14 @@ export default function App() {
               </section>
             </>
           )}
+          <footer className="tma-footer">
+            <span>&copy; 2026 ЗЕРНО</span>
+            <span className="footer__meta">
+              <button type="button" className="link-inline" onClick={() => setPrivacyOpen(true)}>152-ФЗ и cookie</button>
+              <span aria-hidden="true">·</span>
+              <button type="button" className="link-inline" onClick={() => setCookieForceOpen(true)}>Настройки cookie</button>
+            </span>
+          </footer>
         </main>
 
         {!isAdminRoute && totalQty > 0 && (
@@ -450,6 +461,14 @@ export default function App() {
       )}
 
       {privacyOpen && <PrivacyModal onClose={() => setPrivacyOpen(false)} />}
+
+      <CookieBanner
+        prefix="zerno"
+        forceOpen={cookieForceOpen}
+        onCloseForce={() => setCookieForceOpen(false)}
+        onOpenPrivacy={() => setPrivacyOpen(true)}
+        bottomOffset={!isAdminRoute && totalQty > 0}
+      />
     </div>
   );
 }

@@ -23,6 +23,9 @@ export default function PrivacyModal({ onClose }) {
           Оформляя предзаказ в Telegram Mini App кофейни «ЗЕРНО», вы даёте согласие на обработку имени и номера телефона для приготовления напитка, начисления бонусов лояльности и уведомления о готовности на стойке.
         </p>
         <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', lineHeight: 1.6 }}>
+          Приложение использует cookie (<span className="mono">SameSite=Lax</span>): техническую <span className="mono">HttpOnly</span>-сессию <span className="mono">zerno_sid</span>, выбранную тему <span className="mono">zerno_theme</span>, согласие <span className="mono">zerno_cookie_consent</span> и необязательный cookie <span className="mono">zerno_prefs</span> (удаляется при выборе «Только необходимые»).
+        </p>
+        <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', lineHeight: 1.6 }}>
           Данные не передаются третьим лицам и могут быть удалены по вашему запросу.
         </p>
       </div>
