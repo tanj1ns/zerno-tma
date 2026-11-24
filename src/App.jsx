@@ -10,6 +10,7 @@ import {
   ShoppingBag,
   Sparkles,
   Sun,
+  User,
   X
 } from 'lucide-react';
 import {
@@ -24,18 +25,40 @@ import {
   resolveAssetUrl,
   zernoApi
 } from './api';
+import { createClientAuth } from './clientAuth';
 import DrinkModal from './components/DrinkModal';
 import PrivacyModal from './components/PrivacyModal';
 import AdminBarista from './pages/AdminBarista';
+import ClientCabinet from './components/ClientCabinet';
 import CookieBanner, { setCookie } from './components/CookieBanner';
+
+const zernoClientAuth = createClientAuth({
+  prefix: 'zerno',
+  demoSeed: {
+    name: 'Антон К.',
+    email: 'client@zerno-coffee.ru',
+    phone: '+7 (916) 334-10-92',
+    password: 'client12345',
+    meta: {
+      favBar: 'Покровка, 19',
+      favMilk: 'Овсяное',
+      bonus: 340,
+      stamps: 5,
+      orderCodes: ['ZRN-412']
+    }
+  }
+});
 
 export default function App() {
   const [theme, setTheme] = useState(() => document.documentElement.getAttribute('data-theme') || 'dark');
   const [wideMode, setWideMode] = useState(false);
+  const [tab, setTab] = useState('menu'); // 'menu' | 'account'
 
   const [menu, setMenu] = useState([]);
   const [queue, setQueue] = useState([]);
   const [user, setUser] = useState(null);
+  const [client, setClient] = useState(null);
+  const [localOrderCodes, setLocalOrderCodes] = useState([]);
   const [isAdminRoute, setIsAdminRoute] = useState(false);
 
   const [category, setCategory] = useState('all');
@@ -80,6 +103,10 @@ export default function App() {
 
   useEffect(() => {
     refresh();
+    zernoClientAuth
+      .me()
+      .then((res) => setClient(res.client || null))
+      .catch(() => {});
     try {
       if (window.Telegram && window.Telegram.WebApp) {
         window.Telegram.WebApp.ready();
@@ -97,6 +124,13 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    if (!client) return;
+    setClientName(client.name || '');
+    setClientPhone(client.phone || '');
+    if (client.meta?.favBar) setBar(client.meta.favBar);
+  }, [client]);
+
+  useEffect(() => {
     if (checkoutOpen) formOpenedAt.current = Date.now();
   }, [checkoutOpen]);
 
@@ -105,8 +139,10 @@ export default function App() {
     [menu, category]
   );
 
+  const loyaltyPoints = client?.meta?.bonus ?? 340;
+  const loyaltyStamps = client?.meta?.stamps ?? 5;
   const subtotal = cart.reduce((s, i) => s + i.unitPrice * i.qty, 0);
-  const bonusDiscount = calcBonusDiscount(subtotal, spendBonus);
+  const bonusDiscount = calcBonusDiscount(subtotal, spendBonus, loyaltyPoints);
   const finalTotal = Math.max(0, subtotal - bonusDiscount);
   const totalQty = cart.reduce((s, i) => s + i.qty, 0);
 
@@ -153,6 +189,23 @@ export default function App() {
         website: honeypot
       });
       setLastOrder(res.order);
+      if (res.order?.code) {
+        setLocalOrderCodes((prev) => Array.from(new Set([res.order.code, ...prev])));
+        if (client) {
+          const nextBonus = Math.max(0, loyaltyPoints - bonusDiscount + Math.round(finalTotal * 0.07));
+          const nextStamps = ((loyaltyStamps + totalQty - 1) % 6) + 1;
+          const prevCodes = Array.isArray(client.meta?.orderCodes) ? client.meta.orderCodes : [];
+          const nextCodes = [res.order.code, ...prevCodes.filter((c) => c !== res.order.code)].slice(0, 30);
+          const updated = await zernoClientAuth
+            .updateProfile({
+              name: client.name,
+              phone: client.phone,
+              meta: { bonus: nextBonus, stamps: nextStamps, orderCodes: nextCodes }
+            })
+            .catch(() => null);
+          if (updated?.client) setClient(updated.client);
+        }
+      }
       setCart([]);
       setCheckoutOpen(false);
       await refresh();
@@ -163,12 +216,21 @@ export default function App() {
     }
   }
 
+  function handleRepeatOrder(orderItems) {
+    orderItems.forEach((line) => {
+      const item = menu.find((m) => m.id === line.itemId && m.available);
+      if (item) addCartLine(item, item.price, null);
+    });
+    setTab('menu');
+    setCheckoutOpen(true);
+  }
+
   return (
     <div className={`tma-stage ${wideMode ? 'is-wide' : ''}`}>
       <div className="tma-shell">
         <header className="tma-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span className="tma-logo">
+            <span className="tma-logo" onClick={() => setTab('menu')} style={{ cursor: 'pointer' }}>
               <Coffee size={16} />
             </span>
             <div>
@@ -180,6 +242,15 @@ export default function App() {
           </div>
 
           <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+            {!isAdminRoute && (
+              <button
+                type="button"
+                className={`btn btn--outline btn--sm ${tab === 'account' ? 'is-active-pill' : ''}`}
+                onClick={() => setTab((t) => (t === 'account' ? 'menu' : 'account'))}
+              >
+                <User size={14} /> {client ? 'Профиль' : 'Кабинет'}
+              </button>
+            )}
             <button
               type="button"
               className="icon-btn desktop-only"
@@ -207,6 +278,17 @@ export default function App() {
                 setIsAdminRoute(false);
               }}
             />
+          ) : tab === 'account' ? (
+            <ClientCabinet
+              client={client}
+              clientAuth={zernoClientAuth}
+              menu={menu}
+              localOrderCodes={localOrderCodes}
+              onClientChange={setClient}
+              onBackToMenu={() => setTab('menu')}
+              onRepeatOrder={handleRepeatOrder}
+              onOpenPrivacy={() => setPrivacyOpen(true)}
+            />
           ) : (
             <>
               <section className="hero-banner">
@@ -222,7 +304,7 @@ export default function App() {
                   <div className="loyalty-top">
                     <div>
                       <span className="loyalty-kicker">Wallet Coffee Pass &bull; Кэшбэк 7%</span>
-                      <strong className="mono" style={{ fontSize: '1.35rem', display: 'block' }}>340 ₽ баллов</strong>
+                      <strong className="mono" style={{ fontSize: '1.35rem', display: 'block' }}>{loyaltyPoints} ₽ баллов</strong>
                     </div>
                     <label className="bonus-toggle">
                       <input
@@ -233,13 +315,13 @@ export default function App() {
                       <span>Списать до 30%</span>
                     </label>
                   </div>
-                  <div className="stamps-row" aria-label="Накопительная карта: 5 из 6 чашек">
+                  <div className="stamps-row" aria-label={`Накопительная карта: ${loyaltyStamps} из 6 чашек`}>
                     {[1, 2, 3, 4, 5, 6].map((n) => (
-                      <span key={n} className={`stamp-dot ${n <= 5 ? 'is-filled' : ''}`} title={n === 6 ? '6-й напиток бесплатно' : `Штамп ${n}`}>
+                      <span key={n} className={`stamp-dot ${n <= loyaltyStamps ? 'is-filled' : ''}`} title={n === 6 ? '6-й напиток бесплатно' : `Штамп ${n}`}>
                         <Coffee size={13} />
                       </span>
                     ))}
-                    <span className="stamps-caption">5/6 &bull; 6-й в подарок</span>
+                    <span className="stamps-caption">{loyaltyStamps}/6 &bull; 6-й в подарок</span>
                   </div>
                 </div>
               </section>

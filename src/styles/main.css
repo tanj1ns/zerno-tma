@@ -98,6 +98,10 @@ button, input, select { font-family: inherit; }
 .btn--outline { background: transparent; border-color: var(--border-strong); color: var(--text); }
 .btn--ghost { background: transparent; color: var(--text-muted); }
 .btn--sm { padding: 7px 12px; font-size: 0.8rem; }
+.btn--outline.is-active-pill { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
+.demo-creds__box { border: 1px solid var(--border-strong); background: var(--bg-alt); }
+.cab-list { display: flex; flex-direction: column; gap: 8px; }
+.cab-item { padding: 12px; border-radius: 16px; border: 1px solid var(--border); background: var(--bg); display: flex; flex-direction: column; gap: 5px; }
 .icon-btn { width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--border); background: transparent; color: var(--text-muted); display: inline-flex; align-items: center; justify-content: center; cursor: pointer; }
 
 .tg-main-bar { position: sticky; bottom: 0; padding: 12px 16px; background: var(--surface); border-top: 1px solid var(--border); }

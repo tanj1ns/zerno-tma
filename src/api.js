@@ -333,6 +333,25 @@ export const zernoApi = {
     return reqJson('./api/orders', { method: 'POST', body: JSON.stringify(payload) });
   },
 
+  async getOrdersByCodes(codes) {
+    const clean = Array.from(
+      new Set((codes || []).map((c) => String(c || '').trim().toUpperCase()).filter(Boolean))
+    );
+    if (isStaticHost()) {
+      const db = readStaticDb();
+      return { ok: true, orders: db.orders.filter((o) => clean.includes(o.code)) };
+    }
+    try {
+      return await reqJson(`./api/client/orders?codes=${encodeURIComponent(clean.join(','))}`);
+    } catch (err) {
+      if (err && err.name === 'TypeError') {
+        const db = readStaticDb();
+        return { ok: true, orders: db.orders.filter((o) => clean.includes(o.code)) };
+      }
+      throw err;
+    }
+  },
+
   async login(email, password) {
     if (isStaticHost()) {
       let guard = { count: 0, lockedUntil: 0 };
