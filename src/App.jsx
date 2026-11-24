@@ -218,18 +218,30 @@ export default function App() {
               </section>
 
               <section className="loyalty-card">
-                <div>
-                  <span style={{ fontSize: '0.76rem', color: 'var(--text-muted)' }}>Карта гостя ЗЕРНО &bull; Кэшбэк 7%</span>
-                  <strong className="mono" style={{ fontSize: '1.25rem', display: 'block' }}>340 ₽ баллов</strong>
+                <div style={{ flex: 1 }}>
+                  <div className="loyalty-top">
+                    <div>
+                      <span className="loyalty-kicker">Wallet Coffee Pass &bull; Кэшбэк 7%</span>
+                      <strong className="mono" style={{ fontSize: '1.35rem', display: 'block' }}>340 ₽ баллов</strong>
+                    </div>
+                    <label className="bonus-toggle">
+                      <input
+                        type="checkbox"
+                        checked={spendBonus}
+                        onChange={(e) => setSpendBonus(e.target.checked)}
+                      />
+                      <span>Списать до 30%</span>
+                    </label>
+                  </div>
+                  <div className="stamps-row" aria-label="Накопительная карта: 5 из 6 чашек">
+                    {[1, 2, 3, 4, 5, 6].map((n) => (
+                      <span key={n} className={`stamp-dot ${n <= 5 ? 'is-filled' : ''}`} title={n === 6 ? '6-й напиток бесплатно' : `Штамп ${n}`}>
+                        <Coffee size={13} />
+                      </span>
+                    ))}
+                    <span className="stamps-caption">5/6 &bull; 6-й в подарок</span>
+                  </div>
                 </div>
-                <label className="bonus-toggle">
-                  <input
-                    type="checkbox"
-                    checked={spendBonus}
-                    onChange={(e) => setSpendBonus(e.target.checked)}
-                  />
-                  <span>Списать до 30%</span>
-                </label>
               </section>
 
               {lastOrder && (
